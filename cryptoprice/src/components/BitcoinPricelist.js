@@ -7,6 +7,8 @@ import Grid from '@material-ui/core/Grid';
 import { makeStyles } from '@material-ui/core/styles';
 import CardContent from '@material-ui/core/CardContent';
 import Typography from '@material-ui/core/Typography';
+import CanvasJSReact from '../assets/canvasjs.react';
+var CanvasJSChart = CanvasJSReact.CanvasJSChart;
 
 export class BitcoinPricelist extends Component {
   constructor(props) {
@@ -21,10 +23,11 @@ export class BitcoinPricelist extends Component {
   componentDidMount = async () => {
     const prices = await this.LoadInitialValues();
     prices.forEach(recievedPrice => {
-      const price = `${parseFloat(recievedPrice.value).toFixed(2)}`;
-      const date = moment(recievedPrice.date).format('LT');
+      const bitconPrice = recievedPrice.bitcoinValue;
+      const ethereumPrice = recievedPrice.ethereumValue;
+        const date = new Date( Date.parse(recievedPrice.date));
       const prices = this.state.prices;
-      prices.push([price, date]);
+      prices.push([bitconPrice, ethereumPrice, date]);
       this.setState({ prices: prices });
     });
 
@@ -55,63 +58,57 @@ export class BitcoinPricelist extends Component {
         .catch(err => console.log('Error while establishing connection :('));
 
       this.state.hubConnection.on('ReceivePrice', (recievedPrice) => {
-        const price = `${parseFloat(recievedPrice.value).toFixed(2)}`;
-        const date = moment(recievedPrice.date).format('LT');
+        const bitconPrice = recievedPrice.bitcoinValue;
+        const ethereumPrice = recievedPrice.ethereumValue;
+        const date = new Date( Date.parse(recievedPrice.date));
         const prices = this.state.prices;
         if (prices.length === 5) {
           prices.shift();
         }
-        prices.push([price, date]);
+        prices.push([bitconPrice, ethereumPrice, date]);
         this.setState({ prices: prices });
       })
     })
   }
 
-  useStyles = () => makeStyles({
-    root: {
-      minWidth: 275
-    },
-    title: {
-      fontSize: 14,
-    },
-    pos: {
-      marginBottom: 12,
-    },
-  });
 
   render() {
-    const classes = this.useStyles();
+    const prices = this.state.prices;
+    const options = {
+      theme: "light2",
+      animationEnabled: true,
+      title: {
+        text: "Bitcoin and Ethereum Prices to NZD"
+      },
+      toolTip: {
+        shared: true
+      },
+      axisY: {
+				includeZero: false,
+				prefix: "$"
+			},
+      data: [
+      {
+        type: "line",
+        name: "Bitcoin",
+        showInLegend: true,
+        yValueFormatString: "$#,###.##",
+        dataPoints: prices.reverse().map(price => ({x: price[2], y: price[0]}))
+      },
+      {
+        type: "line",
+        name: "Ethereum",
+        showInLegend: true,
+        yValueFormatString: "$#,###.##",
+        dataPoints: prices.reverse().map(price => ({x: price[2], y: price[1]}))
+      }
+      ]
+    }
 
     return (
-      <Grid
-        container
-        spacing={0}
-        direction="column"
-        alignItems="center"
-        justify="center"
-        style={{ minHeight: '100vh' }}
-      >
-        {this.state.prices.slice().reverse().map((price, index) => (
-          <Grid item key={index}>
-            <Card className={classes.root}>
-              <CardContent>
-                <Typography className={classes.title} color="textSecondary" gutterBottom>
-                  1 Bitcoin equals
-                </Typography>
-                <Typography variant="h5" component="h2">
-                  {`${price[0]}`}
-                </Typography>
-                <Typography className={classes.pos} color="textSecondary">
-                  New Zealand Dollars
-                </Typography>
-                <Typography variant="body2" component="p">
-                  at {price[1]}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-    )
+    <div>
+      <CanvasJSChart options = {options}/>
+    </div>
+    );
   }
 }
